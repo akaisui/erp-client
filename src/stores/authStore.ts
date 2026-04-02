@@ -42,6 +42,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Login
   login: (user, token) => {
+    // Đặt cờ đánh dấu UI state để Middleware cho qua (do khác domain với server)
+    if (typeof document !== 'undefined') {
+      document.cookie = `isAuth=true; path=/; max-age=${7 * 24 * 60 * 60}`;
+    }
     set({
       user,
       token,
@@ -51,6 +55,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Logout - Clear everything
   logout: () => {
+    if (typeof document !== 'undefined') {
+      document.cookie = `isAuth=; path=/; max-age=0`;
+    }
     set({
       user: null,
       token: null,

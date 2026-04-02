@@ -32,12 +32,12 @@ const protectedRoutes = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Vì accessToken lưu ở RAM (Client), Middleware (Server) không đọc được.
-  // Chỉ có refreshToken (HttpOnly Cookie) là được gửi kèm request lên Server.
-  const refreshToken = request.cookies.get("refreshToken")?.value;
+  // Middleware chỉ được phép đọc cookie phát hành bởi Frontend.
+  // refreshToken được phát hành bởi Backend (khác tên miền), nên không đọc được.
+  const isAuth = request.cookies.get("isAuth")?.value;
 
-  // Có refreshToken trong cookie nghĩa là người dùng (khả năng cao) đã đăng nhập
-  const isAuthenticated = !!refreshToken;
+  // Có cờ isAuth nghĩa là người dùng (khả năng cao) đã đăng nhập
+  const isAuthenticated = !!isAuth;
 
   // Logic kiểm tra loại route
   const isGuestOnlyRoute = guestOnlyRoutes.some((route) => pathname.startsWith(route));
