@@ -1,0 +1,352 @@
+"use client";
+
+import React, { useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useSupplier, useUpdateSupplier } from "@/hooks/api";
+import Button from "@/components/ui/button/Button";
+import { ArrowLeft, Save } from "lucide-react";
+import { supplierSchema, type SupplierFormData } from "@/lib/validations/supplier.schema";
+import { Supplier } from "@/types";
+
+export default function EditSupplierPage() {
+  const router = useRouter();
+  const params = useParams();
+  const supplierId = parseInt(params.id as string);
+
+  const { data: response, isLoading } = useSupplier(supplierId);
+  const updateSupplier = useUpdateSupplier();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(supplierSchema),
+  });
+
+  const supplier = response?.data as unknown as Supplier;
+
+  // Load data vào form khi supplier được fetch
+  useEffect(() => {
+    if (supplier) {
+      reset({
+        supplierCode: supplier.supplierCode,
+        supplierName: supplier.supplierName,
+        supplierType: supplier.supplierType || "local",
+        contactName: supplier.contactName || "",
+        phone: supplier.phone || "",
+        email: supplier.email || "",
+        address: supplier.address || "",
+        taxCode: supplier.taxCode || "",
+        paymentTerms: supplier.paymentTerms || "",
+        notes: supplier.notes || "",
+        status: supplier.status,
+      });
+    }
+  }, [supplier, reset]);
+
+  const onSubmit = async (data: SupplierFormData) => {
+    const cleanedData = {
+      ...data,
+      supplierCode: data.supplierCode.toUpperCase(),
+    };
+
+    try {
+      await updateSupplier.mutateAsync({
+        id: supplierId,
+        data: cleanedData,
+      });
+      // Toast success được xử lý bởi hook's onSuccess
+      router.push(`/suppliers/${supplierId}`);
+    } catch (error) {
+      // Toast error được xử lý bởi hook's onError
+      console.error("Submit error:", error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!supplier) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-900/30">
+        <p className="text-red-700 dark:text-red-300">Không tìm thấy nhà cung cấp</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Sửa nhà cung cấp
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {supplier.supplierName}
+          </p>
+        </div>
+        <Button variant="outline" size="ssm" onClick={() => router.back()}>
+          <ArrowLeft className="h-5 w-5" />
+          Quay lại
+        </Button>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h2 className="mb-6 text-lg font-semibold text-gray-900 dark:text-white">
+            Thông tin cơ bản
+          </h2>
+
+          <div className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Supplier Code */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Mã NCC <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  {...register("supplierCode")}
+                  placeholder="VD: NCC-001"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm uppercase focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                />
+                {errors.supplierCode && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.supplierCode.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Supplier Type */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Loại NCC
+                </label>
+                <select
+                  {...register("supplierType")}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                >
+                  <option value="local">Trong nước</option>
+                  <option value="foreign">Nước ngoài</option>
+                </select>
+                {errors.supplierType && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.supplierType.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Supplier Name */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Tên nhà cung cấp <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                {...register("supplierName")}
+                placeholder="Nhập tên nhà cung cấp"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              />
+              {errors.supplierName && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {errors.supplierName.message}
+                </p>
+              )}
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Contact Name */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Người liên hệ
+                </label>
+                <input
+                  type="text"
+                  {...register("contactName")}
+                  placeholder="Họ tên người liên hệ"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                />
+                {errors.contactName && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.contactName.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Số điện thoại
+                </label>
+                <input
+                  type="text"
+                  {...register("phone")}
+                  placeholder="0123 456 789"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                />
+                {errors.phone && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.phone.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Email */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  {...register("email")}
+                  placeholder="email@example.com"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Tax Code */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Mã số thuế
+                </label>
+                <input
+                  type="text"
+                  {...register("taxCode")}
+                  placeholder="MST"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                />
+                {errors.taxCode && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.taxCode.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Address */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Địa chỉ
+              </label>
+              <input
+                type="text"
+                {...register("address")}
+                placeholder="Địa chỉ nhà cung cấp"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              />
+              {errors.address && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {errors.address.message}
+                </p>
+              )}
+            </div>
+
+            {/* Payment Terms */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Điều khoản thanh toán
+              </label>
+              <input
+                type="text"
+                {...register("paymentTerms")}
+                placeholder="VD: T/T 30 ngày"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              />
+              {errors.paymentTerms && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {errors.paymentTerms.message}
+                </p>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Ghi chú
+              </label>
+              <textarea
+                {...register("notes")}
+                placeholder="Ghi chú về nhà cung cấp..."
+                rows={4}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              />
+              {errors.notes && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {errors.notes.message}
+                </p>
+              )}
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Trạng thái
+              </label>
+              <select
+                {...register("status")}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              >
+                <option value="active">Hoạt động</option>
+                <option value="inactive">Không hoạt động</option>
+              </select>
+              {errors.status && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {errors.status.message}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3">
+          <Button
+            onClick={() => router.push('/suppliers')}
+            variant="outline"
+            size="sm"
+          >
+            Hủy
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            variant="primary"
+            size="sm"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                Đang cập nhật...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Cập nhật
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
